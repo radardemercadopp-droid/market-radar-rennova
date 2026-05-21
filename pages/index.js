@@ -45,11 +45,6 @@ export default function Home() {
     setMensagem('');
 
     try {
-      let dadosPreco = null;
-      let dadosTech = null;
-      let dadosOutros = null;
-      let competidorFinal = '';
-
       // Validações básicas
       if (!nome.trim()) {
         throw new Error('Por favor, preencha seu nome');
@@ -64,73 +59,83 @@ export default function Home() {
         throw new Error('Por favor, selecione a data da observação');
       }
 
-      // Processamento por tipo
-      if (tipo === 'preco') {
-        if (!distribuidor.trim() && !marca.trim()) {
-          throw new Error('Preencha pelo menos Distribuidor ou Marca');
-        }
-        competidorFinal = distribuidor.trim() || marca.trim();
-        dadosPreco = {};
-        
-        if (checkDistribuidor && distribuidor.trim() && precoDistribuidor.trim()) {
-          dadosPreco.distribuidor = {
-            nome: distribuidor,
-            valor: precoDistribuidor
-          };
-        }
-        if (checkMarca && marca.trim() && precoMarca.trim()) {
-          dadosPreco.marca = {
-            nome: marca,
-            valor: precoMarca
-          };
-        }
-        if (!checkDistribuidor && !checkMarca) {
-          throw new Error('Selecione pelo menos Distribuidor ou Marca');
-        }
-      } else if (tipo === 'tech') {
-        if (!distribuidor.trim() && !marca.trim()) {
-          throw new Error('Preencha pelo menos Distribuidor ou Marca');
-        }
-        competidorFinal = distribuidor.trim() || marca.trim();
-        dadosTech = {
-          nomeEquipamento: nomeEquipamento.trim() || '-',
-          precoEquipamento: precoEquipamento.trim() || '-',
-          mecanicaPagamento: mecanicaPagamento.trim() || '-',
-          especificacoesTech: especificacoesTech.trim() || '-',
-          suporteTech: suporteTech.trim() || '-'
-        };
-      } else if (tipo === 'lancamento') {
-        competidorFinal = distribuidor.trim() || marca.trim() || '-';
-        dadosOutros = { produto: produtoLancamento.trim() || '-' };
-      } else if (tipo === 'evento') {
-        competidorFinal = distribuidor.trim() || marca.trim() || '-';
-        dadosOutros = { nomeEvento: nomeEvento.trim() || '-' };
-      } else if (tipo === 'campanha') {
-        competidorFinal = distribuidor.trim() || marca.trim() || '-';
-        dadosOutros = { nomeCampanha: nomeCampanha.trim() || '-' };
-      } else if (tipo === 'posicionamento') {
-        competidorFinal = distribuidor.trim() || marca.trim() || '-';
-        dadosOutros = { posicionamento: nomePosicionamento.trim() || '-' };
-      } else if (tipo === 'outro') {
-        competidorFinal = distribuidor.trim() || marca.trim() || '-';
-        dadosOutros = { descricaoOutro: nomeOutro.trim() || '-' };
+      let tableName = '';
+      let payload = {
+        nome: nome.trim(),
+        descricao: descricao.trim(),
+        data_observacao: data,
+        fonte: fonte || 'Não especificada',
+        arquivos_json: JSON.stringify(arquivo)
+      };
+
+      // Adicionar distribuidor e marca quando preenchidos
+      if (checkDistribuidor && distribuidor.trim()) {
+        payload.distribuidor = distribuidor.trim();
+      }
+      if (checkMarca && marca.trim()) {
+        payload.marca = marca.trim();
       }
 
-      // Inserir no Supabase
+      // Processamento específico por tipo
+      switch (tipo) {
+        case 'preco':
+          if (!checkDistribuidor && !checkMarca) {
+            throw new Error('Selecione pelo menos Distribuidor ou Marca');
+          }
+          tableName = 'radar_preco';
+          if (checkDistribuidor && precoDistribuidor.trim()) {
+            payload.preco_distribuidor = precoDistribuidor.trim();
+          }
+          if (checkMarca && precoMarca.trim()) {
+            payload.preco_marca = precoMarca.trim();
+          }
+          break;
+
+        case 'tech':
+          if (!checkDistribuidor && !checkMarca) {
+            throw new Error('Selecione pelo menos Distribuidor ou Marca');
+          }
+          tableName = 'radar_tech';
+          payload.nome_equipamento = nomeEquipamento.trim() || null;
+          payload.preco_equipamento = precoEquipamento.trim() || null;
+          payload.mecanica_pagamento = mecanicaPagamento.trim() || null;
+          payload.especificacoes = especificacoesTech.trim() || null;
+          payload.suporte = suporteTech.trim() || null;
+          break;
+
+        case 'lancamento':
+          tableName = 'radar_lancamento';
+          payload.produto_lancado = produtoLancamento.trim() || null;
+          break;
+
+        case 'evento':
+          tableName = 'radar_evento';
+          payload.nome_evento = nomeEvento.trim() || null;
+          break;
+
+        case 'campanha':
+          tableName = 'radar_campanha';
+          payload.nome_campanha = nomeCampanha.trim() || null;
+          break;
+
+        case 'posicionamento':
+          tableName = 'radar_posicionamento';
+          payload.posicionamento = nomePosicionamento.trim() || null;
+          break;
+
+        case 'outro':
+          tableName = 'radar_outro';
+          payload.detalhes_outros = nomeOutro.trim() || null;
+          break;
+
+        default:
+          throw new Error('Tipo de inteligência inválido');
+      }
+
+      // Inserir no Supabase na tabela correta
       const { data: insertData, error } = await supabase
-        .from('radar_inteligencias')
-        .insert([{
-          nome: nome.trim(),
-          tipo: tipo,
-          competidor: competidorFinal,
-          descricao: descricao.trim(),
-          data_observacao: data,
-          fonte: fonte || 'Não especificada',
-          dados_preco: dadosPreco,
-          dados_tech: dadosTech,
-          dados_outros: dadosOutros,
-          arquivos_json: JSON.stringify(arquivo)
-        }]);
+        .from(tableName)
+        .insert([payload]);
 
       if (error) {
         console.error('Erro Supabase:', error);
