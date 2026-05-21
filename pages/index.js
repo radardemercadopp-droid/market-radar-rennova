@@ -69,7 +69,8 @@ export default function Home() {
       if (arquivos.length > 0) {
         for (const arquivo of arquivos) {
           const timestamp = Date.now();
-          const nomeArquivo = `${timestamp}-${arquivo.name}`;
+          // Salvar em pasta por tipo
+          const nomeArquivo = `${tipo}/${timestamp}-${arquivo.name}`;
           
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('radar-anexos')
