@@ -29,8 +29,6 @@ export default function Home() {
   const [nomeEquipamento, setNomeEquipamento] = useState('');
   const [precoEquipamento, setPrecoEquipamento] = useState('');
   const [mecanicaPagamento, setMecanicaPagamento] = useState('');
-  const [especificacoesTech, setEspecificacoesTech] = useState('');
-  const [suporteTech, setSuporteTech] = useState('');
 
   // Outros tipos
   const [produtoLancamento, setProdutoLancamento] = useState('');
@@ -99,8 +97,6 @@ export default function Home() {
           payload.nome_equipamento = nomeEquipamento.trim() || null;
           payload.preco_equipamento = precoEquipamento.trim() || null;
           payload.mecanica_pagamento = mecanicaPagamento.trim() || null;
-          payload.especificacoes = especificacoesTech.trim() || null;
-          payload.suporte = suporteTech.trim() || null;
           break;
 
         case 'lancamento':
@@ -460,47 +456,9 @@ export default function Home() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                  Especificações técnicas
-                </label>
-                <textarea
-                  value={especificacoesTech}
-                  onChange={(e) => setEspecificacoesTech(e.target.value)}
-                  placeholder="Frequência, potência, compatibilidades..."
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box',
-                    minHeight: '80px',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
 
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                  Suporte/Treinamento
-                </label>
-                <textarea
-                  value={suporteTech}
-                  onChange={(e) => setSuporteTech(e.target.value)}
-                  placeholder="Tipo de suporte, garantia, treinamento oferecido..."
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box',
-                    minHeight: '80px',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
+
+
             </div>
           )}
 
