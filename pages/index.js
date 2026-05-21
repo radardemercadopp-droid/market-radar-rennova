@@ -1,4 +1,11 @@
 import { useState } from 'react';
+import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
+
+// Configuração Supabase
+const SUPABASE_URL = 'https://rtvjkagmjomsfpgucwxk.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_5SjT35FPGgu_CCuseQQuhw_K1_xmCbJ';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export default function Home() {
   const [nome, setNome] = useState('');
@@ -7,11 +14,10 @@ export default function Home() {
   const [descricao, setDescricao] = useState('');
   const [data, setData] = useState('');
   const [fonte, setFonte] = useState('');
-  const [confianca, setConfianca] = useState('');
-  const [implicacao, setImplicacao] = useState('');
-  const [impacto, setImpacto] = useState('');
+  const [arquivo, setArquivo] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [mensagem, setMensagem] = useState('');
+  const [tipoMensagem, setTipoMensagem] = useState('');
 
   // Preço
   const [competidorPreco, setCompetidorPreco] = useState('');
@@ -19,6 +25,8 @@ export default function Home() {
   const [precoDistribuidor, setPrecoDistribuidor] = useState('');
   const [nomeMarca, setNomeMarca] = useState('');
   const [precoMarca, setPrecoMarca] = useState('');
+  const [checkDistribuidor, setCheckDistribuidor] = useState(false);
+  const [checkMarca, setCheckMarca] = useState(false);
 
   // Tech
   const [competidorTech, setCompetidorTech] = useState('');
@@ -28,83 +36,127 @@ export default function Home() {
   const [especificacoesTech, setEspecificacoesTech] = useState('');
   const [suporteTech, setSuporteTech] = useState('');
 
-  // Checkboxes
-  const [checkDistribuidor, setCheckDistribuidor] = useState(false);
-  const [checkMarca, setCheckMarca] = useState(false);
-
-  const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxI_APo8-WgKtNUGndMK-LNJBX0wg8HaF7Bhs759-cHKB_58g46LHaTU-wS2Dx8lyGqow/exec';
+  // Outros tipos
+  const [produtoLancamento, setProdutoLancamento] = useState('');
+  const [nomeEventoTech, setNomeEventoTech] = useState('');
+  const [nomeCampanhaTech, setNomeCampanhaTech] = useState('');
+  const [nomePosicionamento, setNomePosicionamento] = useState('');
+  const [nomeOutro, setNomeOutro] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setEnviando(true);
     setMensagem('');
 
-    let precoData = null;
-    let techData = null;
-    let competidorFinal = competidor;
-
-    if (tipo === 'preco') {
-      competidorFinal = competidorPreco;
-      precoData = {};
-      if (checkDistribuidor) {
-        precoData.distribuidor = {
-          nome: nomeDistribuidor,
-          valor: precoDistribuidor
-        };
-      }
-      if (checkMarca) {
-        precoData.marca = {
-          nome: nomeMarca,
-          valor: precoMarca
-        };
-      }
-    } else if (tipo === 'tech') {
-      competidorFinal = competidorTech;
-      techData = {
-        nomeEquipamento,
-        precoEquipamento,
-        mecanicaPagamento,
-        especificacoesTech,
-        suporteTech
-      };
-    }
-
-    const novaInteligencia = {
-      dataCriacao: new Date().toLocaleString('pt-BR'),
-      nome,
-      tipo,
-      competidor: competidorFinal,
-      descricao,
-      data,
-      fonte,
-      confianca,
-      implicacao,
-      impacto,
-      preco: precoData,
-      tech: techData
-    };
-
     try {
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(novaInteligencia),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      let competidorFinal = competidor;
+      let dadosPreco = null;
+      let dadosTech = null;
+      let dadosOutros = null;
 
-      const result = await response.json();
+      // Validações básicas
+      if (!nome.trim()) {
+        throw new Error('Por favor, preencha seu nome');
+      }
+      if (!tipo) {
+        throw new Error('Por favor, selecione um tipo de inteligência');
+      }
+      if (!descricao.trim()) {
+        throw new Error('Por favor, preencha a descrição');
+      }
+      if (!data) {
+        throw new Error('Por favor, selecione a data da observação');
+      }
 
-      if (result.status === 'sucesso') {
-        setMensagem('✓ Inteligência enviada com sucesso!');
-        // Limpar form
+      // Processamento por tipo
+      if (tipo === 'preco') {
+        if (!competidorPreco.trim()) {
+          throw new Error('Por favor, preencha o competidor/distribuidor');
+        }
+        competidorFinal = competidorPreco;
+        dadosPreco = {};
+        if (checkDistribuidor) {
+          if (!nomeDistribuidor.trim() || !precoDistribuidor.trim()) {
+            throw new Error('Preencha nome e preço do distribuidor');
+          }
+          dadosPreco.distribuidor = {
+            nome: nomeDistribuidor,
+            valor: precoDistribuidor
+          };
+        }
+        if (checkMarca) {
+          if (!nomeMarca.trim() || !precoMarca.trim()) {
+            throw new Error('Preencha nome e preço da marca');
+          }
+          dadosPreco.marca = {
+            nome: nomeMarca,
+            valor: precoMarca
+          };
+        }
+        if (!checkDistribuidor && !checkMarca) {
+          throw new Error('Selecione pelo menos Distribuidor ou Marca');
+        }
+      } else if (tipo === 'tech') {
+        if (!competidorTech.trim()) {
+          throw new Error('Por favor, preencha o competidor/marca');
+        }
+        competidorFinal = competidorTech;
+        dadosTech = {
+          nomeEquipamento: nomeEquipamento.trim() || '-',
+          precoEquipamento: precoEquipamento.trim() || '-',
+          mecanicaPagamento: mecanicaPagamento.trim() || '-',
+          especificacoesTech: especificacoesTech.trim() || '-',
+          suporteTech: suporteTech.trim() || '-'
+        };
+      } else if (tipo === 'lancamento') {
+        dadosOutros = { produto: produtoLancamento.trim() || '-' };
+      } else if (tipo === 'evento') {
+        dadosOutros = { nomeEvento: nomeEventoTech.trim() || '-' };
+      } else if (tipo === 'campanha') {
+        dadosOutros = { nomeCampanha: nomeCampanhaTech.trim() || '-' };
+      } else if (tipo === 'posicionamento') {
+        dadosOutros = { posicionamento: nomePosicionamento.trim() || '-' };
+      } else if (tipo === 'outro') {
+        dadosOutros = { descricaoOutro: nomeOutro.trim() || '-' };
+      }
+
+      // Inserir no Supabase
+      const { data: insertData, error } = await supabase
+        .from('radar_inteligencias')
+        .insert([{
+          nome: nome.trim(),
+          tipo: tipo,
+          competidor: competidorFinal,
+          descricao: descricao.trim(),
+          data_observacao: data,
+          fonte: fonte || 'Não especificada',
+          dados_preco: dadosPreco,
+          dados_tech: dadosTech,
+          dados_outros: dadosOutros,
+          arquivos_json: JSON.stringify(arquivo)
+        }]);
+
+      if (error) {
+        console.error('Erro Supabase:', error);
+        // Se tabela não existe, dar dica
+        if (error.code === 'PGRST116' || error.message.includes('relation')) {
+          throw new Error('Tabela não existe ainda no Supabase. Aguarde a criação da tabela.');
+        }
+        throw new Error(error.message || 'Erro ao salvar inteligência');
+      }
+
+      setTipoMensagem('sucesso');
+      setMensagem('✓ Inteligência salva com sucesso!');
+      
+      // Limpar formulário
+      setTimeout(() => {
         setNome('');
         setTipo('');
         setCompetidor('');
         setDescricao('');
         setData('');
         setFonte('');
-        setConfianca('');
-        setImplicacao('');
-        setImpacto('');
+        setArquivo([]);
         setCompetidorPreco('');
         setNomeDistribuidor('');
         setPrecoDistribuidor('');
@@ -118,37 +170,119 @@ export default function Home() {
         setMecanicaPagamento('');
         setEspecificacoesTech('');
         setSuporteTech('');
-      } else {
-        setMensagem('✗ Erro ao enviar: ' + (result.mensagem || 'Tente novamente'));
-      }
-    } catch (err) {
-      setMensagem('✗ Erro: ' + err.message);
-    }
+        setProdutoLancamento('');
+        setNomeEventoTech('');
+        setNomeCampanhaTech('');
+        setNomePosicionamento('');
+        setNomeOutro('');
+        setMensagem('');
+      }, 2000);
 
-    setEnviando(false);
+    } catch (err) {
+      setTipoMensagem('erro');
+      setMensagem(`✗ Erro: ${err.message}`);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const handleArquivos = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setArquivo(prev => [...prev, {
+          nome: file.name,
+          dados: event.target.result
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-      <div style={{ marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #e0e0e0' }}>
-        <h1 style={{ margin: '0', fontSize: '24px', fontWeight: '500' }}>Market Radar - Rennova</h1>
-        <p style={{ margin: '0.5rem 0 0', fontSize: '14px', color: '#666' }}>Reportar inteligências competitivas</p>
-      </div>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '20px',
+      fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+    }}>
+      <div style={{
+        maxWidth: '900px',
+        margin: '0 auto',
+        background: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+        overflow: 'hidden'
+      }}>
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          padding: '30px',
+          textAlign: 'center'
+        }}>
+          <h1 style={{ margin: '0 0 10px 0', fontSize: '28px' }}>📊 Radar de Mercado</h1>
+          <p style={{ margin: '0', fontSize: '14px', opacity: 0.9 }}>Rennova - Inteligência Competitiva</p>
+        </div>
 
-      <form onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
-        {/* Base */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '1rem' }}>Informações Básicas</h3>
+        {/* Formulário */}
+        <form onSubmit={handleSubmit} style={{ padding: '30px' }}>
           
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Seu nome *</label>
-            <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }} />
+          {/* Mensagem de feedback */}
+          {mensagem && (
+            <div style={{
+              padding: '15px',
+              marginBottom: '20px',
+              borderRadius: '8px',
+              background: tipoMensagem === 'sucesso' ? '#d4edda' : '#f8d7da',
+              color: tipoMensagem === 'sucesso' ? '#155724' : '#721c24',
+              border: `1px solid ${tipoMensagem === 'sucesso' ? '#c3e6cb' : '#f5c6cb'}`,
+              fontSize: '14px'
+            }}>
+              {mensagem}
+            </div>
+          )}
+
+          {/* Campo: Seu nome */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+              Seu nome *
+            </label>
+            <input
+              type="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Digite seu nome"
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            />
           </div>
 
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Tipo de inteligência *</label>
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)} required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
-              <option value="">-- Selecionar --</option>
+          {/* Campo: Tipo de inteligência */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+              Tipo de inteligência *
+            </label>
+            <select
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <option value="">-- Selecione --</option>
               <option value="lancamento">Lançamento de produto</option>
               <option value="preco">Preço</option>
               <option value="tech">Tech/Equipamento</option>
@@ -158,201 +292,554 @@ export default function Home() {
               <option value="outro">Outro</option>
             </select>
           </div>
-        </div>
 
-        {/* Preço */}
-        {tipo === 'preco' && (
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '1rem' }}>Detalhes - Preço</h3>
-            
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Marca/Competidor</label>
-              <select value={competidorPreco} onChange={(e) => setCompetidorPreco(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
-                <option value="">-- Selecionar --</option>
-                <option value="Galderma">Galderma</option>
-                <option value="Ilikia">Ilikia</option>
-                <option value="Merz">Merz</option>
-                <option value="AbbVie/Allergan">AbbVie/Allergan</option>
-                <option value="Outro">Outro</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '1rem', padding: '0.75rem', backgroundColor: '#f9f9f9', borderRadius: '4px', border: '1px solid #e0e0e0' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem', cursor: 'pointer', fontSize: '14px' }}>
-                <input type="checkbox" checked={checkDistribuidor} onChange={(e) => setCheckDistribuidor(e.target.checked)} />
-                <span style={{ fontWeight: '500' }}>Distribuidor</span>
-              </label>
-              {checkDistribuidor && (
-                <div style={{ marginLeft: '1.5rem' }}>
-                  <input type="text" value={nomeDistribuidor} onChange={(e) => setNomeDistribuidor(e.target.value)} placeholder="Nome do distribuidor" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', marginBottom: '0.5rem', boxSizing: 'border-box' }} />
-                  <input type="text" value={precoDistribuidor} onChange={(e) => setPrecoDistribuidor(e.target.value)} placeholder="Preço (ex: R$ 500)" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }} />
-                </div>
-              )}
-            </div>
-
-            <div style={{ padding: '0.75rem', backgroundColor: '#f9f9f9', borderRadius: '4px', border: '1px solid #e0e0e0' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem', cursor: 'pointer', fontSize: '14px' }}>
-                <input type="checkbox" checked={checkMarca} onChange={(e) => setCheckMarca(e.target.checked)} />
-                <span style={{ fontWeight: '500' }}>Marca Concorrente</span>
-              </label>
-              {checkMarca && (
-                <div style={{ marginLeft: '1.5rem' }}>
-                  <input type="text" value={nomeMarca} onChange={(e) => setNomeMarca(e.target.value)} placeholder="Nome da marca/produto" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', marginBottom: '0.5rem', boxSizing: 'border-box' }} />
-                  <input type="text" value={precoMarca} onChange={(e) => setPrecoMarca(e.target.value)} placeholder="Preço (ex: R$ 450)" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }} />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tech */}
-        {tipo === 'tech' && (
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '1rem' }}>Detalhes - Tech/Equipamento</h3>
-            
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Marca/Competidor</label>
-              <select value={competidorTech} onChange={(e) => setCompetidorTech(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
-                <option value="">-- Selecionar --</option>
-                <option value="Galderma">Galderma</option>
-                <option value="Ilikia">Ilikia</option>
-                <option value="Merz">Merz</option>
-                <option value="AbbVie/Allergan">AbbVie/Allergan</option>
-                <option value="Outro">Outro</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Nome do equipamento</label>
-              <input type="text" value={nomeEquipamento} onChange={(e) => setNomeEquipamento(e.target.value)} placeholder="Ex: Rennova Tech Pro" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Preço da unidade</label>
-              <input type="text" value={precoEquipamento} onChange={(e) => setPrecoEquipamento(e.target.value)} placeholder="Ex: R$ 50.000" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Mecânica de pagamento</label>
-              <select value={mecanicaPagamento} onChange={(e) => setMecanicaPagamento(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
-                <option value="">-- Selecionar --</option>
-                <option value="Compra direta">Compra direta (upfront)</option>
-                <option value="Leasing">Leasing</option>
-                <option value="Aluguel">Aluguel/Uso por demanda</option>
-                <option value="SaaS">SaaS (assinatura)</option>
-                <option value="Consórcio">Consórcio</option>
-                <option value="Outro">Outro</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Especificações técnicas</label>
-              <textarea value={especificacoesTech} onChange={(e) => setEspecificacoesTech(e.target.value)} placeholder="Potência, tecnologia, capacidade, etc." style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', minHeight: '80px', boxSizing: 'border-box', fontFamily: 'inherit' }} />
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Suporte/Manutenção</label>
-              <textarea value={suporteTech} onChange={(e) => setSuporteTech(e.target.value)} placeholder="Planos de suporte, garantia, treinamento" style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', minHeight: '60px', boxSizing: 'border-box', fontFamily: 'inherit' }} />
-            </div>
-          </div>
-        )}
-
-        {/* Outros */}
-        {tipo && tipo !== 'preco' && tipo !== 'tech' && (
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '1rem' }}>Detalhes</h3>
-            
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Marca/Competidor</label>
-              <select value={competidor} onChange={(e) => setCompetidor(e.target.value)} style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
-                <option value="">-- Selecionar --</option>
-                <option value="Galderma">Galderma</option>
-                <option value="Ilikia">Ilikia</option>
-                <option value="Merz">Merz</option>
-                <option value="AbbVie/Allergan">AbbVie/Allergan</option>
-                <option value="Outro">Outro</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* Descrição */}
-        {tipo && (
-          <>
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '1rem' }}>Descrição e Contexto</h3>
+          {/* SEÇÃO PREÇO */}
+          {tipo === 'preco' && (
+            <div style={{
+              background: '#f8f9fa',
+              padding: '20px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Informações de Preço</h3>
               
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Descrição *</label>
-                <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Descreva com detalhes" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', minHeight: '100px', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+                  Competidor/Distribuidor *
+                </label>
+                <input
+                  type="text"
+                  value={competidorPreco}
+                  onChange={(e) => setCompetidorPreco(e.target.value)}
+                  placeholder="Ex: Galderma, Merz, distribuidor local"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Data da observação *</label>
-                <input type="date" value={data} onChange={(e) => setData(e.target.value)} required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }} />
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', fontSize: '14px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={checkDistribuidor}
+                    onChange={(e) => setCheckDistribuidor(e.target.checked)}
+                    style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  Preço do distribuidor
+                </label>
+                {checkDistribuidor && (
+                  <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <input
+                      type="text"
+                      placeholder="Nome do distribuidor"
+                      value={nomeDistribuidor}
+                      onChange={(e) => setNomeDistribuidor(e.target.value)}
+                      style={{
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Preço (ex: R$ 500)"
+                      value={precoDistribuidor}
+                      onChange={(e) => setPrecoDistribuidor(e.target.value)}
+                      style={{
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Fonte *</label>
-                <select value={fonte} onChange={(e) => setFonte(e.target.value)} required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
-                  <option value="">-- Selecionar --</option>
-                  <option value="Evento/Congresso">Evento/Congresso</option>
-                  <option value="Site/Mídia digital">Site/Mídia digital</option>
-                  <option value="Contato direto">Contato direto</option>
-                  <option value="Mídia tradicional">Mídia tradicional</option>
-                  <option value="Rede de vendas">Rede de vendas</option>
-                  <option value="Outro">Outro</option>
-                </select>
-              </div>
-
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Confiança *</label>
-                <select value={confianca} onChange={(e) => setConfianca(e.target.value)} required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
-                  <option value="">-- Selecionar --</option>
-                  <option value="Confirmado">Confirmado</option>
-                  <option value="Provável">Provável</option>
-                  <option value="Rumor">Rumor</option>
-                </select>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', fontSize: '14px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={checkMarca}
+                    onChange={(e) => setCheckMarca(e.target.checked)}
+                    style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  Preço da marca concorrente
+                </label>
+                {checkMarca && (
+                  <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <input
+                      type="text"
+                      placeholder="Nome da marca"
+                      value={nomeMarca}
+                      onChange={(e) => setNomeMarca(e.target.value)}
+                      style={{
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Preço (ex: R$ 750)"
+                      value={precoMarca}
+                      onChange={(e) => setPrecoMarca(e.target.value)}
+                      style={{
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '6px',
+                        fontSize: '14px'
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
+          )}
 
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '500', marginBottom: '1rem' }}>Implicação para Rennova</h3>
+          {/* SEÇÃO TECH */}
+          {tipo === 'tech' && (
+            <div style={{
+              background: '#f8f9fa',
+              padding: '20px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Informações do Equipamento</h3>
               
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Por que importa? *</label>
-                <textarea value={implicacao} onChange={(e) => setImplicacao(e.target.value)} placeholder="Descreva relevância e impacto" required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', minHeight: '80px', boxSizing: 'border-box', fontFamily: 'inherit' }} />
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+                  Marca/Competidor *
+                </label>
+                <input
+                  type="text"
+                  value={competidorTech}
+                  onChange={(e) => setCompetidorTech(e.target.value)}
+                  placeholder="Ex: Galderma, Merz, Allergan"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>Tipo de impacto *</label>
-                <select value={impacto} onChange={(e) => setImpacto(e.target.value)} required style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}>
-                  <option value="">-- Selecionar --</option>
-                  <option value="Oportunidade">Oportunidade</option>
-                  <option value="Ameaça">Ameaça</option>
-                  <option value="Monitoramento">Monitoramento</option>
-                  <option value="Informativo">Informativo</option>
-                </select>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+                  Nome do equipamento
+                </label>
+                <input
+                  type="text"
+                  value={nomeEquipamento}
+                  onChange={(e) => setNomeEquipamento(e.target.value)}
+                  placeholder="Ex: Laser XYZ, RF Device"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '15px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+                    Preço da unidade
+                  </label>
+                  <input
+                    type="text"
+                    value={precoEquipamento}
+                    onChange={(e) => setPrecoEquipamento(e.target.value)}
+                    placeholder="Ex: USD 50.000"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+                    Mecânica de pagamento
+                  </label>
+                  <input
+                    type="text"
+                    value={mecanicaPagamento}
+                    onChange={(e) => setMecanicaPagamento(e.target.value)}
+                    placeholder="Ex: À vista, parcelado"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+                  Especificações técnicas
+                </label>
+                <textarea
+                  value={especificacoesTech}
+                  onChange={(e) => setEspecificacoesTech(e.target.value)}
+                  placeholder="Frequência, potência, compatibilidades..."
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    minHeight: '80px',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+                  Suporte/Treinamento
+                </label>
+                <textarea
+                  value={suporteTech}
+                  onChange={(e) => setSuporteTech(e.target.value)}
+                  placeholder="Tipo de suporte, garantia, treinamento oferecido..."
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                    minHeight: '80px',
+                    fontFamily: 'inherit'
+                  }}
+                />
               </div>
             </div>
+          )}
 
-            <div style={{ display: 'flex', gap: '12px', borderTop: '1px solid #e0e0e0', paddingTop: '1.5rem' }}>
-              <button type="submit" disabled={enviando} style={{ flex: 1, padding: '0.75rem', background: enviando ? '#ccc' : '#333', color: 'white', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>
-                {enviando ? 'Enviando...' : 'Enviar Inteligência'}
-              </button>
-              <button type="reset" style={{ flex: 1, padding: '0.75rem', background: '#f0f0f0', color: '#333', border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>
-                Limpar
-              </button>
+          {/* SEÇÃO LANÇAMENTO */}
+          {tipo === 'lancamento' && (
+            <div style={{
+              background: '#f8f9fa',
+              padding: '20px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Detalhes do Lançamento</h3>
+              <input
+                type="text"
+                value={produtoLancamento}
+                onChange={(e) => setProdutoLancamento(e.target.value)}
+                placeholder="Nome do produto/solução lançada"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
             </div>
-          </>
-        )}
-      </form>
+          )}
 
-      {mensagem && (
-        <div style={{ padding: '1rem', backgroundColor: mensagem.includes('✓') ? '#e8f5e9' : '#ffebee', color: mensagem.includes('✓') ? '#2e7d32' : '#c62828', borderRadius: '4px', textAlign: 'center', fontSize: '14px', border: `1px solid ${mensagem.includes('✓') ? '#c8e6c9' : '#ffcdd2'}` }}>
-          {mensagem}
-        </div>
-      )}
+          {/* SEÇÃO EVENTO */}
+          {tipo === 'evento' && (
+            <div style={{
+              background: '#f8f9fa',
+              padding: '20px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Detalhes do Evento</h3>
+              <input
+                type="text"
+                value={nomeEventoTech}
+                onChange={(e) => setNomeEventoTech(e.target.value)}
+                placeholder="Nome do evento/conferência"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          )}
+
+          {/* SEÇÃO CAMPANHA */}
+          {tipo === 'campanha' && (
+            <div style={{
+              background: '#f8f9fa',
+              padding: '20px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Detalhes da Campanha</h3>
+              <input
+                type="text"
+                value={nomeCampanhaTech}
+                onChange={(e) => setNomeCampanhaTech(e.target.value)}
+                placeholder="Nome/tema da campanha"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          )}
+
+          {/* SEÇÃO POSICIONAMENTO */}
+          {tipo === 'posicionamento' && (
+            <div style={{
+              background: '#f8f9fa',
+              padding: '20px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Posicionamento</h3>
+              <input
+                type="text"
+                value={nomePosicionamento}
+                onChange={(e) => setNomePosicionamento(e.target.value)}
+                placeholder="Descreva o novo posicionamento/estratégia"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          )}
+
+          {/* SEÇÃO OUTRO */}
+          {tipo === 'outro' && (
+            <div style={{
+              background: '#f8f9fa',
+              padding: '20px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Detalhes Adicionais</h3>
+              <input
+                type="text"
+                value={nomeOutro}
+                onChange={(e) => setNomeOutro(e.target.value)}
+                placeholder="Descreva o tipo de inteligência"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Descrição */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+              Descrição *
+            </label>
+            <textarea
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Detalhe a inteligência coletada"
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+                minHeight: '100px',
+                fontFamily: 'inherit'
+              }}
+            />
+          </div>
+
+          {/* Data de observação */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+              Data da observação *
+            </label>
+            <input
+              type="date"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {/* Fonte */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+              Fonte
+            </label>
+            <select
+              value={fonte}
+              onChange={(e) => setFonte(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <option value="">-- Selecione --</option>
+              <option value="evento">Evento/Conferência</option>
+              <option value="imprensa">Imprensa/Mídia</option>
+              <option value="vendas">Equipe de vendas</option>
+              <option value="cliente">Feedback de cliente</option>
+              <option value="website">Website/Redes sociais</option>
+              <option value="outro">Outra</option>
+            </select>
+          </div>
+
+          {/* Anexos */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+              Anexos (imagens)
+            </label>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleArquivos}
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                fontSize: '14px',
+                boxSizing: 'border-box'
+              }}
+            />
+            {arquivo.length > 0 && (
+              <div style={{ marginTop: '10px', fontSize: '13px', color: '#666' }}>
+                {arquivo.length} arquivo(s) selecionado(s)
+              </div>
+            )}
+          </div>
+
+          {/* Botões */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginTop: '30px' }}>
+            <button
+              type="submit"
+              disabled={enviando}
+              style={{
+                padding: '12px',
+                background: enviando ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: enviando ? 'not-allowed' : 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {enviando ? '⏳ Enviando...' : '✓ Enviar Inteligência'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setNome('');
+                setTipo('');
+                setDescricao('');
+                setData('');
+                setCompetidor('');
+                setFonte('');
+                setArquivo([]);
+                setMensagem('');
+              }}
+              style={{
+                padding: '12px',
+                background: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              🔄 Limpar
+            </button>
+
+            <Link href="/historico">
+              <a style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '12px',
+                background: '#0066cc',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textDecoration: 'none',
+                transition: 'all 0.3s ease'
+              }}>
+                📊 Ver Histórico
+              </a>
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
