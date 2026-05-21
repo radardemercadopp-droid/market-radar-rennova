@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
+// v2.1 - Fix cache
+
 // Configuração Supabase
 const SUPABASE_URL = 'https://rtvjkagmjomsfpgucwxk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_5SjT35FPGgu_CCuseQQuhw_K1_xmCbJ';
