@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 
 // Configuração Supabase
@@ -10,7 +9,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export default function Home() {
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState('');
-  const [competidor, setCompetidor] = useState('');
   const [descricao, setDescricao] = useState('');
   const [data, setData] = useState('');
   const [fonte, setFonte] = useState('');
@@ -19,17 +17,15 @@ export default function Home() {
   const [mensagem, setMensagem] = useState('');
   const [tipoMensagem, setTipoMensagem] = useState('');
 
-  // Preço
-  const [competidorPreco, setCompetidorPreco] = useState('');
-  const [nomeDistribuidor, setNomeDistribuidor] = useState('');
+  // Campo COMUM para todos os tipos - Distribuidor/Marca
+  const [distribuidor, setDistribuidor] = useState('');
   const [precoDistribuidor, setPrecoDistribuidor] = useState('');
-  const [nomeMarca, setNomeMarca] = useState('');
+  const [marca, setMarca] = useState('');
   const [precoMarca, setPrecoMarca] = useState('');
   const [checkDistribuidor, setCheckDistribuidor] = useState(false);
   const [checkMarca, setCheckMarca] = useState(false);
 
-  // Tech
-  const [competidorTech, setCompetidorTech] = useState('');
+  // Tech específico
   const [nomeEquipamento, setNomeEquipamento] = useState('');
   const [precoEquipamento, setPrecoEquipamento] = useState('');
   const [mecanicaPagamento, setMecanicaPagamento] = useState('');
@@ -38,8 +34,8 @@ export default function Home() {
 
   // Outros tipos
   const [produtoLancamento, setProdutoLancamento] = useState('');
-  const [nomeEventoTech, setNomeEventoTech] = useState('');
-  const [nomeCampanhaTech, setNomeCampanhaTech] = useState('');
+  const [nomeEvento, setNomeEvento] = useState('');
+  const [nomeCampanha, setNomeCampanha] = useState('');
   const [nomePosicionamento, setNomePosicionamento] = useState('');
   const [nomeOutro, setNomeOutro] = useState('');
 
@@ -49,10 +45,10 @@ export default function Home() {
     setMensagem('');
 
     try {
-      let competidorFinal = competidor;
       let dadosPreco = null;
       let dadosTech = null;
       let dadosOutros = null;
+      let competidorFinal = '';
 
       // Validações básicas
       if (!nome.trim()) {
@@ -70,26 +66,21 @@ export default function Home() {
 
       // Processamento por tipo
       if (tipo === 'preco') {
-        if (!competidorPreco.trim()) {
-          throw new Error('Por favor, preencha o competidor/distribuidor');
+        if (!distribuidor.trim() && !marca.trim()) {
+          throw new Error('Preencha pelo menos Distribuidor ou Marca');
         }
-        competidorFinal = competidorPreco;
+        competidorFinal = distribuidor.trim() || marca.trim();
         dadosPreco = {};
-        if (checkDistribuidor) {
-          if (!nomeDistribuidor.trim() || !precoDistribuidor.trim()) {
-            throw new Error('Preencha nome e preço do distribuidor');
-          }
+        
+        if (checkDistribuidor && distribuidor.trim() && precoDistribuidor.trim()) {
           dadosPreco.distribuidor = {
-            nome: nomeDistribuidor,
+            nome: distribuidor,
             valor: precoDistribuidor
           };
         }
-        if (checkMarca) {
-          if (!nomeMarca.trim() || !precoMarca.trim()) {
-            throw new Error('Preencha nome e preço da marca');
-          }
+        if (checkMarca && marca.trim() && precoMarca.trim()) {
           dadosPreco.marca = {
-            nome: nomeMarca,
+            nome: marca,
             valor: precoMarca
           };
         }
@@ -97,10 +88,10 @@ export default function Home() {
           throw new Error('Selecione pelo menos Distribuidor ou Marca');
         }
       } else if (tipo === 'tech') {
-        if (!competidorTech.trim()) {
-          throw new Error('Por favor, preencha o competidor/marca');
+        if (!distribuidor.trim() && !marca.trim()) {
+          throw new Error('Preencha pelo menos Distribuidor ou Marca');
         }
-        competidorFinal = competidorTech;
+        competidorFinal = distribuidor.trim() || marca.trim();
         dadosTech = {
           nomeEquipamento: nomeEquipamento.trim() || '-',
           precoEquipamento: precoEquipamento.trim() || '-',
@@ -109,14 +100,19 @@ export default function Home() {
           suporteTech: suporteTech.trim() || '-'
         };
       } else if (tipo === 'lancamento') {
+        competidorFinal = distribuidor.trim() || marca.trim() || '-';
         dadosOutros = { produto: produtoLancamento.trim() || '-' };
       } else if (tipo === 'evento') {
-        dadosOutros = { nomeEvento: nomeEventoTech.trim() || '-' };
+        competidorFinal = distribuidor.trim() || marca.trim() || '-';
+        dadosOutros = { nomeEvento: nomeEvento.trim() || '-' };
       } else if (tipo === 'campanha') {
-        dadosOutros = { nomeCampanha: nomeCampanhaTech.trim() || '-' };
+        competidorFinal = distribuidor.trim() || marca.trim() || '-';
+        dadosOutros = { nomeCampanha: nomeCampanha.trim() || '-' };
       } else if (tipo === 'posicionamento') {
+        competidorFinal = distribuidor.trim() || marca.trim() || '-';
         dadosOutros = { posicionamento: nomePosicionamento.trim() || '-' };
       } else if (tipo === 'outro') {
+        competidorFinal = distribuidor.trim() || marca.trim() || '-';
         dadosOutros = { descricaoOutro: nomeOutro.trim() || '-' };
       }
 
@@ -138,10 +134,6 @@ export default function Home() {
 
       if (error) {
         console.error('Erro Supabase:', error);
-        // Se tabela não existe, dar dica
-        if (error.code === 'PGRST116' || error.message.includes('relation')) {
-          throw new Error('Tabela não existe ainda no Supabase. Aguarde a criação da tabela.');
-        }
         throw new Error(error.message || 'Erro ao salvar inteligência');
       }
 
@@ -152,27 +144,24 @@ export default function Home() {
       setTimeout(() => {
         setNome('');
         setTipo('');
-        setCompetidor('');
         setDescricao('');
         setData('');
         setFonte('');
         setArquivo([]);
-        setCompetidorPreco('');
-        setNomeDistribuidor('');
+        setDistribuidor('');
         setPrecoDistribuidor('');
-        setNomeMarca('');
+        setMarca('');
         setPrecoMarca('');
         setCheckDistribuidor(false);
         setCheckMarca(false);
-        setCompetidorTech('');
         setNomeEquipamento('');
         setPrecoEquipamento('');
         setMecanicaPagamento('');
         setEspecificacoesTech('');
         setSuporteTech('');
         setProdutoLancamento('');
-        setNomeEventoTech('');
-        setNomeCampanhaTech('');
+        setNomeEvento('');
+        setNomeCampanha('');
         setNomePosicionamento('');
         setNomeOutro('');
         setMensagem('');
@@ -283,9 +272,9 @@ export default function Home() {
               }}
             >
               <option value="">-- Selecione --</option>
-              <option value="lancamento">Lançamento de produto</option>
               <option value="preco">Preço</option>
               <option value="tech">Tech/Equipamento</option>
+              <option value="lancamento">Lançamento de produto</option>
               <option value="evento">Evento/Participação</option>
               <option value="campanha">Campanha/Marketing</option>
               <option value="posicionamento">Posicionamento</option>
@@ -293,8 +282,8 @@ export default function Home() {
             </select>
           </div>
 
-          {/* SEÇÃO PREÇO */}
-          {tipo === 'preco' && (
+          {/* SEÇÃO COMUM: Distribuidor e Marca */}
+          {['preco', 'tech', 'lancamento', 'evento', 'campanha', 'posicionamento', 'outro'].includes(tipo) && (
             <div style={{
               background: '#f8f9fa',
               padding: '20px',
@@ -302,28 +291,8 @@ export default function Home() {
               marginBottom: '20px',
               border: '1px solid #e9ecef'
             }}>
-              <h3 style={{ marginTop: 0, color: '#333' }}>Informações de Preço</h3>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Distribuidor / Marca Concorrente</h3>
               
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                  Competidor/Distribuidor *
-                </label>
-                <input
-                  type="text"
-                  value={competidorPreco}
-                  onChange={(e) => setCompetidorPreco(e.target.value)}
-                  placeholder="Ex: Galderma, Merz, distribuidor local"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', fontSize: '14px', cursor: 'pointer' }}>
                   <input
@@ -332,34 +301,38 @@ export default function Home() {
                     onChange={(e) => setCheckDistribuidor(e.target.checked)}
                     style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
                   />
-                  Preço do distribuidor
+                  <strong>Distribuidor</strong>
                 </label>
                 {checkDistribuidor && (
                   <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <input
                       type="text"
                       placeholder="Nome do distribuidor"
-                      value={nomeDistribuidor}
-                      onChange={(e) => setNomeDistribuidor(e.target.value)}
+                      value={distribuidor}
+                      onChange={(e) => setDistribuidor(e.target.value)}
                       style={{
                         padding: '8px',
                         border: '1px solid #ddd',
                         borderRadius: '6px',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
                       }}
                     />
-                    <input
-                      type="text"
-                      placeholder="Preço (ex: R$ 500)"
-                      value={precoDistribuidor}
-                      onChange={(e) => setPrecoDistribuidor(e.target.value)}
-                      style={{
-                        padding: '8px',
-                        border: '1px solid #ddd',
-                        borderRadius: '6px',
-                        fontSize: '14px'
-                      }}
-                    />
+                    {tipo === 'preco' && (
+                      <input
+                        type="text"
+                        placeholder="Preço (ex: R$ 500)"
+                        value={precoDistribuidor}
+                        onChange={(e) => setPrecoDistribuidor(e.target.value)}
+                        style={{
+                          padding: '8px',
+                          border: '1px solid #ddd',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -372,34 +345,38 @@ export default function Home() {
                     onChange={(e) => setCheckMarca(e.target.checked)}
                     style={{ marginRight: '8px', width: '18px', height: '18px', cursor: 'pointer' }}
                   />
-                  Preço da marca concorrente
+                  <strong>Marca Concorrente</strong>
                 </label>
                 {checkMarca && (
                   <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <input
                       type="text"
                       placeholder="Nome da marca"
-                      value={nomeMarca}
-                      onChange={(e) => setNomeMarca(e.target.value)}
+                      value={marca}
+                      onChange={(e) => setMarca(e.target.value)}
                       style={{
                         padding: '8px',
                         border: '1px solid #ddd',
                         borderRadius: '6px',
-                        fontSize: '14px'
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
                       }}
                     />
-                    <input
-                      type="text"
-                      placeholder="Preço (ex: R$ 750)"
-                      value={precoMarca}
-                      onChange={(e) => setPrecoMarca(e.target.value)}
-                      style={{
-                        padding: '8px',
-                        border: '1px solid #ddd',
-                        borderRadius: '6px',
-                        fontSize: '14px'
-                      }}
-                    />
+                    {tipo === 'preco' && (
+                      <input
+                        type="text"
+                        placeholder="Preço (ex: R$ 750)"
+                        value={precoMarca}
+                        onChange={(e) => setPrecoMarca(e.target.value)}
+                        style={{
+                          padding: '8px',
+                          border: '1px solid #ddd',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -415,28 +392,8 @@ export default function Home() {
               marginBottom: '20px',
               border: '1px solid #e9ecef'
             }}>
-              <h3 style={{ marginTop: 0, color: '#333' }}>Informações do Equipamento</h3>
+              <h3 style={{ marginTop: 0, color: '#333' }}>Detalhes do Equipamento</h3>
               
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                  Marca/Competidor *
-                </label>
-                <input
-                  type="text"
-                  value={competidorTech}
-                  onChange={(e) => setCompetidorTech(e.target.value)}
-                  placeholder="Ex: Galderma, Merz, Allergan"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
-
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
                   Nome do equipamento
@@ -581,8 +538,8 @@ export default function Home() {
               <h3 style={{ marginTop: 0, color: '#333' }}>Detalhes do Evento</h3>
               <input
                 type="text"
-                value={nomeEventoTech}
-                onChange={(e) => setNomeEventoTech(e.target.value)}
+                value={nomeEvento}
+                onChange={(e) => setNomeEvento(e.target.value)}
                 placeholder="Nome do evento/conferência"
                 style={{
                   width: '100%',
@@ -608,8 +565,8 @@ export default function Home() {
               <h3 style={{ marginTop: 0, color: '#333' }}>Detalhes da Campanha</h3>
               <input
                 type="text"
-                value={nomeCampanhaTech}
-                onChange={(e) => setNomeCampanhaTech(e.target.value)}
+                value={nomeCampanha}
+                onChange={(e) => setNomeCampanha(e.target.value)}
                 placeholder="Nome/tema da campanha"
                 style={{
                   width: '100%',
@@ -773,7 +730,7 @@ export default function Home() {
           </div>
 
           {/* Botões */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginTop: '30px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '30px' }}>
             <button
               type="submit"
               disabled={enviando}
@@ -799,9 +756,24 @@ export default function Home() {
                 setTipo('');
                 setDescricao('');
                 setData('');
-                setCompetidor('');
                 setFonte('');
                 setArquivo([]);
+                setDistribuidor('');
+                setPrecoDistribuidor('');
+                setMarca('');
+                setPrecoMarca('');
+                setCheckDistribuidor(false);
+                setCheckMarca(false);
+                setNomeEquipamento('');
+                setPrecoEquipamento('');
+                setMecanicaPagamento('');
+                setEspecificacoesTech('');
+                setSuporteTech('');
+                setProdutoLancamento('');
+                setNomeEvento('');
+                setNomeCampanha('');
+                setNomePosicionamento('');
+                setNomeOutro('');
                 setMensagem('');
               }}
               style={{
@@ -817,26 +789,6 @@ export default function Home() {
             >
               🔄 Limpar
             </button>
-
-            <Link href="/historico">
-              <a style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '12px',
-                background: '#0066cc',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontWeight: '600',
-                fontSize: '14px',
-                cursor: 'pointer',
-                textDecoration: 'none',
-                transition: 'all 0.3s ease'
-              }}>
-                📊 Ver Histórico
-              </a>
-            </Link>
           </div>
         </form>
       </div>
