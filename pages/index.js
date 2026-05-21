@@ -238,21 +238,6 @@ export default function Home() {
         {/* Formulário */}
         <form onSubmit={handleSubmit} style={{ padding: '30px' }}>
           
-          {/* Mensagem de feedback */}
-          {mensagem && (
-            <div style={{
-              padding: '15px',
-              marginBottom: '20px',
-              borderRadius: '8px',
-              background: tipoMensagem === 'sucesso' ? '#d4edda' : '#f8d7da',
-              color: tipoMensagem === 'sucesso' ? '#155724' : '#721c24',
-              border: `1px solid ${tipoMensagem === 'sucesso' ? '#c3e6cb' : '#f5c6cb'}`,
-              fontSize: '14px'
-            }}>
-              {mensagem}
-            </div>
-          )}
-
           {/* Campo: Seu nome */}
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
@@ -766,6 +751,21 @@ export default function Home() {
               🔄 Limpar
             </button>
           </div>
+
+          {/* Mensagem de feedback - NO FINAL */}
+          {mensagem && (
+            <div style={{
+              padding: '15px',
+              marginTop: '20px',
+              borderRadius: '8px',
+              background: tipoMensagem === 'sucesso' ? '#d4edda' : '#f8d7da',
+              color: tipoMensagem === 'sucesso' ? '#155724' : '#721c24',
+              border: `1px solid ${tipoMensagem === 'sucesso' ? '#c3e6cb' : '#f5c6cb'}`,
+              fontSize: '14px'
+            }}>
+              {mensagem}
+            </div>
+          )}
         </form>
       </div>
     </div>
