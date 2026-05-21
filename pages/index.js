@@ -212,7 +212,7 @@ export default function Home() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: '#24296c',
       padding: '20px',
       fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
     }}>
@@ -226,7 +226,7 @@ export default function Home() {
       }}>
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: '#24296c',
           color: 'white',
           padding: '30px',
           textAlign: 'center'
@@ -699,7 +699,7 @@ export default function Home() {
               disabled={enviando}
               style={{
                 padding: '12px',
-                background: enviando ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: enviando ? '#ccc' : '#24296c',
                 color: 'white',
                 border: 'none',
                 borderRadius: '6px',
