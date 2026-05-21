@@ -12,7 +12,7 @@ export default function Home() {
   const [descricao, setDescricao] = useState('');
   const [data, setData] = useState('');
   const [fonte, setFonte] = useState('');
-  const [arquivo, setArquivo] = useState([]);
+  const [arquivos, setArquivos] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [mensagem, setMensagem] = useState('');
   const [tipoMensagem, setTipoMensagem] = useState('');
@@ -37,6 +37,11 @@ export default function Home() {
   const [nomePosicionamento, setNomePosicionamento] = useState('');
   const [nomeOutro, setNomeOutro] = useState('');
 
+  const handleArquivos = (e) => {
+    const files = Array.from(e.target.files);
+    setArquivos(files);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setEnviando(true);
@@ -57,13 +62,40 @@ export default function Home() {
         throw new Error('Por favor, selecione a data da observação');
       }
 
+      // Upload de arquivos
+      let urlsArquivos = [];
+      if (arquivos.length > 0) {
+        for (const arquivo of arquivos) {
+          const timestamp = Date.now();
+          const nomeArquivo = `${timestamp}-${arquivo.name}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('radar-anexos')
+            .upload(nomeArquivo, arquivo);
+
+          if (uploadError) {
+            throw new Error(`Erro ao fazer upload de ${arquivo.name}: ${uploadError.message}`);
+          }
+
+          // Gerar URL pública
+          const { data: { publicUrl } } = supabase.storage
+            .from('radar-anexos')
+            .getPublicUrl(nomeArquivo);
+
+          urlsArquivos.push({
+            nome: arquivo.name,
+            url: publicUrl
+          });
+        }
+      }
+
       let tableName = '';
       let payload = {
         nome: nome.trim(),
         descricao: descricao.trim(),
         data_observacao: data,
         fonte: fonte || 'Não especificada',
-        arquivos_json: JSON.stringify(arquivo)
+        arquivos_json: JSON.stringify(urlsArquivos)
       };
 
       // Adicionar distribuidor e marca quando preenchidos
@@ -148,7 +180,7 @@ export default function Home() {
         setDescricao('');
         setData('');
         setFonte('');
-        setArquivo([]);
+        setArquivos([]);
         setDistribuidor('');
         setPrecoDistribuidor('');
         setMarca('');
@@ -158,8 +190,6 @@ export default function Home() {
         setNomeEquipamento('');
         setPrecoEquipamento('');
         setMecanicaPagamento('');
-        setEspecificacoesTech('');
-        setSuporteTech('');
         setProdutoLancamento('');
         setNomeEvento('');
         setNomeCampanha('');
@@ -174,20 +204,6 @@ export default function Home() {
     } finally {
       setEnviando(false);
     }
-  };
-
-  const handleArquivos = (e) => {
-    const files = Array.from(e.target.files);
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setArquivo(prev => [...prev, {
-          nome: file.name,
-          dados: event.target.result
-        }]);
-      };
-      reader.readAsDataURL(file);
-    });
   };
 
   return (
@@ -455,10 +471,6 @@ export default function Home() {
                   />
                 </div>
               </div>
-
-
-
-
             </div>
           )}
 
@@ -685,9 +697,9 @@ export default function Home() {
                 boxSizing: 'border-box'
               }}
             />
-            {arquivo.length > 0 && (
+            {arquivos.length > 0 && (
               <div style={{ marginTop: '10px', fontSize: '13px', color: '#666' }}>
-                {arquivo.length} arquivo(s) selecionado(s)
+                ✅ {arquivos.length} arquivo(s) selecionado(s)
               </div>
             )}
           </div>
@@ -720,7 +732,7 @@ export default function Home() {
                 setDescricao('');
                 setData('');
                 setFonte('');
-                setArquivo([]);
+                setArquivos([]);
                 setDistribuidor('');
                 setPrecoDistribuidor('');
                 setMarca('');
@@ -730,8 +742,6 @@ export default function Home() {
                 setNomeEquipamento('');
                 setPrecoEquipamento('');
                 setMecanicaPagamento('');
-                setEspecificacoesTech('');
-                setSuporteTech('');
                 setProdutoLancamento('');
                 setNomeEvento('');
                 setNomeCampanha('');
